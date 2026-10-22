@@ -1,0 +1,67 @@
+name: Desktop builds and tests
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bundles: app,dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Test native storage on Windows and Linux
+        if: runner.os != 'macOS'
+        run: cargo test --locked --release --target ${{ matrix.target }} --manifest-path src-tauri/Cargo.toml
+      - name: Test native storage on macOS
+        if: runner.os == 'macOS'
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - name: Build internal desktop packages
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+        run: node node_modules/@tauri-apps/cli/tauri.js build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.ci.conf.json
+      - name: Collect packages and checksums
+        run: node scripts/collect-packages.mjs ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Noted-${{ matrix.target }}
+          path: packages/
+          if-no-files-found: error
+          retention-days: 30

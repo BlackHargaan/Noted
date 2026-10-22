@@ -1,0 +1,26 @@
+[package]
+name = "noted"
+version = "0.2.1"
+description = "A private offline workspace for notes and tasks"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "noted_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+rusqlite = { version = "0.38", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+
