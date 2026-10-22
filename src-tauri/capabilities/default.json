@@ -3,5 +3,5 @@
   "identifier": "main",
   "description": "Local workspace window; no remote origins or generic filesystem access.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-close"]
+  "permissions": ["core:default", "core:window:allow-close", "core:window:allow-destroy"]
 }
