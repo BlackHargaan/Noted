@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react';
 import { Note, Task, Store, active, descendants, trashItem, restoreItem, moveNote, localDate } from './model';
 import { WorkspaceSession, desktop, exportBackup, importBackup, Recovery } from './persistence';
+import { version } from '../package.json';
+import AppUpdates from './AppUpdates';
 import Modal, { ModalRequest } from './Modal';
 import { TaskContext } from './TaskContext';
 import TaskList from './TaskList';
 const NoteEditor = lazy(() => import('./NoteEditor'));
 type Page = 'home' | 'notes' | 'tasks' | 'trash' | 'settings';
 export default function App({ session }: { session: WorkspaceSession }) {
+  const [updating, setUpdating] = useState(false);
   const snapshot = useSyncExternalStore(session.subscribe, session.snapshot);
   const store = snapshot.store, setStore = session.update;
   const notes = active(store.notes), tasks = active(store.tasks), projects = active(store.projects);
@@ -41,7 +44,7 @@ export default function App({ session }: { session: WorkspaceSession }) {
   useEffect(() => { if (page === 'tasks' && !query) taskInput.current?.focus(); },[page]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || dialog) return;
+      if (!(e.ctrlKey || e.metaKey) || dialog || updating) return;
       if (e.key.toLowerCase() === 'k') { e.preventDefault(); search.current?.focus(); }
       if (e.key.toLowerCase() === 'n') { e.preventDefault(); addNote(); }
       if (e.key.toLowerCase() === 's') { e.preventDefault(); void run(() => session.flush()); }
@@ -58,7 +61,7 @@ export default function App({ session }: { session: WorkspaceSession }) {
   const taskMatches=tasks.filter(t=>t.title.toLowerCase().includes(q));
   const filtered=tasks.filter(t=>(!project||t.projectId===project)&&(!priority||(t.priority??'medium')===priority)&&(status==='all'||t.done===(status==='done'))&&(!due||(due==='today'?t.due===today:due==='overdue'?!!t.due&&t.due<today:!t.due)));
   const trashed = store.notes.filter(n=>n.deletedAt).length+store.tasks.filter(t=>t.deletedAt).length+store.projects.filter(p=>p.deletedAt).length;
-  return <TaskContext.Provider value={{store,editTask,openNote}}><div className="app">
+  return <TaskContext.Provider value={{store,editTask,openNote}}><div className="app" inert={updating}>
     <aside><div className="brand">✦ noted<span>.</span></div><small>WORKSPACE</small><nav>{(['home','notes','tasks','trash','settings'] as Page[]).map(p=><button key={p} aria-current={page===p?'page':undefined} className={page===p?'active':''} onClick={()=>navigate(p)}>{p==='home'?'⌂':p==='notes'?'▤':p==='tasks'?'☑':p==='trash'?'♲':'⚙'} &nbsp; {p[0].toUpperCase()+p.slice(1)}{' '}<em>{p==='notes'?notes.length:p==='tasks'?pending:p==='trash'?trashed:''}</em></button>)}</nav><small>QUICK CAPTURE</small><button className="nav-add" onClick={()=>addNote()}>+ New note</button><button className="nav-add" onClick={()=>{navigate('tasks');taskInput.current?.focus();}}>+ New task</button><footer>{desktop?'Desktop · SQLite':'Browser preview · Local'}<br/><span role="status">{saving}</span></footer></aside>
     <main><header><span>Workspace / <b>{q?'Search':page[0].toUpperCase()+page.slice(1)}</b></span><input ref={search} aria-label="Search workspace" placeholder="Search notes and tasks… (Ctrl/⌘ K)" value={query} onChange={e=>setQuery(e.target.value)}/></header>
       {snapshot.status==='error'&&<div className="error" role="alert"><strong>Changes have not been saved.</strong><p>{snapshot.error}</p><p>Keep Noted open. Retry saving or export your current workspace.</p><button onClick={()=>void run(()=>session.flush())}>Retry save</button><button onClick={()=>void run(async()=>{await exportBackup(store);})}>Export unsaved workspace</button></div>}
@@ -86,9 +89,10 @@ export default function App({ session }: { session: WorkspaceSession }) {
               confirm('Replace this workspace with '+imported.notes.length+' notes and '+imported.tasks.length+' tasks? Export a backup first if you want to keep this workspace.',async()=>{await session.replace(imported);setSelected(active(imported.notes)[0]?.id??null);setProject('');setMessage('Backup restored.');},'Replace workspace');
             })}>Import backup</button><button disabled={!desktop} onClick={()=>void run(async()=>{setRecoveries(await session.recoveries());setMessage('Recovery history loaded.');})}>Load recovery history</button></div>
             {recoveries.map(r=><div className="trash-row" key={r.revision}><span>Revision {r.revision} · {new Date(Number(r.created)*1000).toLocaleString()}</span><button onClick={()=>void run(async()=>{const previous=await session.recovery(r.revision);confirm('Restore revision '+r.revision+'? The current saved workspace will remain in recovery history.',async()=>{await session.replace(previous);setSelected(active(previous.notes)[0]?.id??null);setProject('');setRecoveries(await session.recoveries());},'Restore revision');})}>Restore</button></div>)}
-          </section><section className="settings-card"><h2>Keyboard shortcuts</h2><p>Ctrl/⌘ K: search · Ctrl/⌘ N: new note · Ctrl/⌘ J: tasks · Ctrl/⌘ S: save now</p><h2>About Noted</h2><p>Version 0.2.0 · Desktop beta. Offline notes and tasks.</p></section></>}
+          </section><section className="settings-card"><h2>Keyboard shortcuts</h2><p>Ctrl/⌘ K: search · Ctrl/⌘ N: new note · Ctrl/⌘ J: tasks · Ctrl/⌘ S: save now</p><h2>About Noted</h2><p>Version {version} · Desktop beta. Offline notes and tasks.</p></section></>}
         </>}
+        <AppUpdates session={session} visible={page === 'settings' && !q} lock={setUpdating}/>
       </div>
     </main>{dialog&&<Modal request={dialog} close={()=>setDialog(null)}/>}
-  </div></TaskContext.Provider>;
+  </div>{updating && <div className="update-overlay" role="status">Saving and installing update… Noted will restart.</div>}</TaskContext.Provider>;
 }

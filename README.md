@@ -76,3 +76,7 @@ Supported workspace limits: 25 MB JSON, 50,000 total items, and 64 page/subtask 
 - Add signed update delivery after upgrade and recovery validation.
 
 Cloud sync, collaboration, recurring tasks, and calendar integrations remain outside this beta's scope.
+
+## App updates
+
+Version 0.2.1 adds Settings → App updates for checking, downloading, and installing verified desktop updates. Pending workspace changes are saved before installation. Older installations need this version installed manually once. See [update signing and draft release setup](docs/APP-UPDATES.md).

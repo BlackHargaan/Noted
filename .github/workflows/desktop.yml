@@ -56,12 +56,12 @@ jobs:
       - name: Build internal desktop packages
         env:
           APPLE_SIGNING_IDENTITY: '-'
-        run: node node_modules/@tauri-apps/cli/tauri.js build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+        run: node node_modules/@tauri-apps/cli/tauri.js build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.ci.conf.json
       - name: Collect packages and checksums
         run: node scripts/collect-packages.mjs ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
-          name: Noted-0.2.0-${{ matrix.target }}
+          name: Noted-${{ matrix.target }}
           path: packages/
           if-no-files-found: error
           retention-days: 30

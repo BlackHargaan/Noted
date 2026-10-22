@@ -12,3 +12,6 @@ src-tauri/icons/Square*.png
 src-tauri/icons/StoreLogo.png
 src-tauri/icons/64x64.png
 src-tauri/icons/icon.png
+
+# Private update-signing keys must never enter source control.
+*.key

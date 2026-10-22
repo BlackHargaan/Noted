@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Noted",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "identifier": "com.blackhargaan.noted",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -10,7 +10,17 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "Noted", "width": 1200, "height": 800, "minWidth": 760, "minHeight": 560, "backgroundColor": "#121419" }],
+    "windows": [
+      {
+        "label": "main",
+        "title": "Noted",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 760,
+        "minHeight": 560,
+        "backgroundColor": "#121419"
+      }
+    ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; frame-src 'none'"
     }
@@ -20,8 +30,32 @@
     "targets": "all",
     "category": "Productivity",
     "shortDescription": "Private notes and tasks, together.",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
-    "windows": { "nsis": { "installMode": "currentUser" } },
-    "macOS": { "minimumSystemVersion": "11.0" }
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwNUU0OENFREU1NUMwNTIKUldSU3dGWGV6a2hlNEdWSGtDYWdLZ1pkTElML3hyOVd1ZTByalora2NmSE9pckpqRWlwTDdjSm8K",
+      "endpoints": [
+        "https://github.com/BlackHargaan/Noted/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
