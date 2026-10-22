@@ -3,13 +3,17 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Note } from './model';
 import { useState } from 'react';
+import { TaskReference } from './TaskReference';
+import { useTasks } from './TaskContext';
 
 function escape(text: string) { return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); }
-export default function NoteEditor({ note, update }: { note: Note; update: (patch: Partial<Note>) => void }) {
+export default function NoteEditor({ note, update, createTask }: { note: Note; update: (patch: Partial<Note>) => void; createTask: (title: string) => string }) {
   const [link, setLink] = useState<string | null>(null);
+  const [taskTitle, setTaskTitle] = useState(''), [existing, setExisting] = useState('');
+  const { store } = useTasks();
   const editor = useEditor({
     shouldRerenderOnTransaction: true,
-    extensions: [StarterKit.configure({ link: { openOnClick: false } }), Placeholder.configure({ placeholder: 'Start writing…' })],
+    extensions: [StarterKit.configure({ link: { openOnClick: false } }), TaskReference, Placeholder.configure({ placeholder: 'Start writing…' })],
     content: note.html ?? '<p>' + escape(note.body) + '</p>',
     onUpdate: ({ editor }) => update({ html: editor.getHTML(), body: editor.getText() }),
   });
@@ -27,5 +31,7 @@ export default function NoteEditor({ note, update }: { note: Note; update: (patc
     <button type="button" onClick={() => setLink(editor.getAttributes('link').href || '')}>Link</button>
     <button type="button" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>Undo</button>
     <button type="button" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}>Redo</button>
-  </div>{link !== null && <form className="add-task" onSubmit={e => { e.preventDefault(); editor.chain().focus().extendMarkRange('link').setLink({ href: link }).run(); setLink(null); }}><input autoFocus aria-label="Link URL" type="url" pattern="https?://.*" placeholder="https://example.com" required value={link} onChange={e => setLink(e.target.value)} /><button className="primary">Apply</button><button type="button" onClick={() => { editor.chain().focus().unsetLink().run(); setLink(null); }}>Remove link</button><button type="button" onClick={() => setLink(null)}>Cancel</button></form>}<EditorContent editor={editor} aria-label="Note content" /></>;
+  </div>{link !== null && <form className="add-task" onSubmit={e => { e.preventDefault(); editor.chain().focus().extendMarkRange('link').setLink({ href: link }).run(); setLink(null); }}><input autoFocus aria-label="Link URL" type="url" pattern="https?://.*" placeholder="https://example.com" required value={link} onChange={e => setLink(e.target.value)} /><button className="primary">Apply</button><button type="button" onClick={() => { editor.chain().focus().unsetLink().run(); setLink(null); }}>Remove link</button><button type="button" onClick={() => setLink(null)}>Cancel</button></form>}
+  <div className="inline-tools"><form onSubmit={e => { e.preventDefault(); if (!taskTitle.trim()) return; const taskId = createTask(taskTitle.trim()); editor.chain().focus().insertContent({ type: 'taskReference', attrs: { taskId } }).run(); setTaskTitle(''); }}><input aria-label="New inline task" placeholder="Task to insert at cursor…" value={taskTitle} onChange={e => setTaskTitle(e.target.value)} required /><button>Insert task</button></form><select aria-label="Existing task to insert" value={existing} onChange={e => setExisting(e.target.value)}><option value="">Choose existing task…</option>{store.tasks.filter(t => !t.deletedAt).map(t => <option key={t.id} value={t.id}>{t.title || 'Untitled'}</option>)}</select><button disabled={!existing} onClick={() => { editor.chain().focus().insertContent({ type: 'taskReference', attrs: { taskId: existing } }).run(); setExisting(''); }}>Insert reference</button></div>
+  <EditorContent editor={editor} aria-label="Note content" /></>;
 }
