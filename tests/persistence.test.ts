@@ -6,6 +6,10 @@ function memoryRepo(): Repository & { writes: Store[] } {
 }
 beforeEach(()=>{localStorage.clear();});
 describe('save lifecycle',()=>{
+  it('keeps the saved indicator correct when a page cannot move farther',async()=>{
+    const repo=memoryRepo();const session=await openSession(repo);session.update(s=>s);await session.flush();
+    expect(session.snapshot().status).toBe('saved');expect(repo.writes).toHaveLength(0);
+  });
   it('serializes rapid edits arriving while a save is in flight',async()=>{
     const repo=memoryRepo();let finish: (()=>void)|undefined;const writes:Store[]=[];
     repo.save=async(s,r)=>{writes.push(s);if(writes.length===1)await new Promise<void>(resolve=>{finish=resolve;});return r+1;};

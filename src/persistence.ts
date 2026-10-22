@@ -52,6 +52,7 @@ export class WorkspaceSession {
   get dirty() { return this.current.store !== this.saved; }
   update = (updater: Store | ((s: Store) => Store)) => {
     const store = typeof updater === 'function' ? updater(this.current.store) : parseStore(updater);
+    if (store === this.current.store) return;
     this.emit({ store, status: 'saving' });
     clearTimeout(this.timer);
     this.timer = setTimeout(() => { void this.flush().catch(() => {}); }, 250);
